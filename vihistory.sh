@@ -1,4 +1,8 @@
 #!/bin/bash
+
+
+# Edit 20150330 
+
 if [ -e $1 ]
 then
 	if [ $(du -b $1 | cut -f 1) -gt "2048000" ]
