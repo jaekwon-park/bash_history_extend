@@ -22,14 +22,15 @@ then
 	else
 		#logger -p local6.debug "$(whoami) [$PWD]: Edit started $1"
 		var1=$(mktemp) # make temporay file
+		edited_file=$($(echo $PWD | sed s:\/:_:g)-$(echo $1 | sed s:\/:_:g)-$(openssl rand -base64 3))
 		cp -p $1 $var1 # copy original file
 		$vim $1
 		temp_IFS=$IFS
 		IFS=$'\n'
-		diff -uNr \$var1 $1 > /var/log/changed_file/$(date +%F_%H:%M:%S)-$(echo $1 | sed s:\/:_:g )-$(openssl rand -base64 3)
+		diff -uNr $var1 $1 > /var/log/changed_file/$edited_file
 		#for i in $( diff -uNr $var1 $1 |  tail -n$(expr $(diff -uNr $var1 $1 | wc -l) - 1) ) 
 		#do
-		#	logger -p local6.debug "Changed the file $1 : $i"
+			logger -p local6.debug "Changed the file $1 : $edited_file"
 		#done
 		IFS=$temp_IFS
 		rm $var1 
@@ -39,7 +40,6 @@ else
 	$vim $1
 	logger -p local6.debug "created New file $1"
 fi
-
 
 fi
 
