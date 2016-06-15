@@ -22,7 +22,7 @@ then
 	else
 		#logger -p local6.debug "$(whoami) [$PWD]: Edit started $1"
 		var1=$(mktemp) # make temporay file
-		edited_file=$($(echo $PWD | sed s:\/:_:g)-$(echo $1 | sed s:\/:_:g)-$(openssl rand -base64 3))
+		edited_file=$(echo $(echo $PWD | sed s:\/:_:g)-$(echo $1 | sed s:\/:_:g)-$(openssl rand -base64 3))
 		cp -p $1 $var1 # copy original file
 		$vim $1
 		temp_IFS=$IFS
