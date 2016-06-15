@@ -3,7 +3,7 @@
 if [ -n "$1" ]
 then 
 # check vim and vi editor. default value is vim 
-which aaa
+which vim
 if [  $? -ne 0 ]
 then
 	vim=$(which vi)
