@@ -2,13 +2,13 @@
 
 if [ -n "$1" ]
 then 
-
 # check vim and vi editor. default value is vim 
-if [  -z $(whereis vim | awk '{print $2}') ] 
+which aaa
+if [  $? -ne 0 ]
 then
-	vim=$(whereis vi | awk '{print $2}')
+	vim=$(which vi)
 else
-	vim=$(whereis vim | awk '{print $2}')
+	vim=$(which vim)
 fi
 
 
