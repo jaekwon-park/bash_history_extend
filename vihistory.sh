@@ -11,7 +11,6 @@ else
 	vim=$(which vim)
 fi
 
-
 # logging edit history 
 if [ -e "$1" ]
 then
@@ -21,19 +20,20 @@ then
 		logger -p local6.debug "$(whoami) [$PWD]: Edit on $1"
 		logger -p local6.debug "file $1 is bigger then 2Mb. so this file doesn't remain the change log." 
 	else
-		logger -p local6.debug "$(whoami) [$PWD]: Edit started $1"
+		#logger -p local6.debug "$(whoami) [$PWD]: Edit started $1"
 		var1=$(mktemp) # make temporay file
 		cp -p $1 $var1 # copy original file
 		$vim $1
 		temp_IFS=$IFS
 		IFS=$'\n'
-		for i in $( diff -uNr $var1 $1 |  tail -n$(expr $(diff -uNr $var1 $1 | wc -l) - 1) ) 
-		do
-			logger -p local6.debug "Changed the file $1 : $i"
-		done
+		diff -uNr \$var1 $1 > /var/log/changed_file/$(date +%F_%H:%M:%S)-$1-$(openssl rand -base64 3)
+		#for i in $( diff -uNr $var1 $1 |  tail -n$(expr $(diff -uNr $var1 $1 | wc -l) - 1) ) 
+		#do
+		#	logger -p local6.debug "Changed the file $1 : $i"
+		#done
 		IFS=$temp_IFS
 		rm $var1 
-		logger -p local6.debug "$(whoami) [$PWD]: End of Edit $1"
+		#logger -p local6.debug "$(whoami) [$PWD]: End of Edit $1"
 	fi
 else
 	$vim $1
@@ -81,6 +81,13 @@ then
 	if [ -z $(grep "alias vi='vimhistory'" /etc/$bashrc) ]
 	then
 		echo "alias vi='vimhistory'" >> /etc/$bashrc
+	fi
+	
+	if [ ! -d /var/log/changed_file/ ]
+	then
+		mkdir -p /var/log/changed_file/
+		chown -R root:root /var/log/changed_file
+		chmod -R 0644:0644 /var/log/changed_file
 	fi
 
 fi
