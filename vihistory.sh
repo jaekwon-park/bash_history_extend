@@ -26,7 +26,7 @@ then
 		$vim $1
 		temp_IFS=$IFS
 		IFS=$'\n'
-		diff -uNr \$var1 $1 > /var/log/changed_file/$(date +%F_%H:%M:%S)-$1-$(openssl rand -base64 3)
+		diff -uNr \$var1 $1 > /var/log/changed_file/$(date +%F_%H:%M:%S)-$(echo $1 | sed s:\/:_:g )-$(openssl rand -base64 3)
 		#for i in $( diff -uNr $var1 $1 |  tail -n$(expr $(diff -uNr $var1 $1 | wc -l) - 1) ) 
 		#do
 		#	logger -p local6.debug "Changed the file $1 : $i"
@@ -87,7 +87,7 @@ then
 	then
 		mkdir -p /var/log/changed_file/
 		chown -R root:root /var/log/changed_file
-		chmod -R 0644 /var/log/changed_file
+		chmod -R 0666 /var/log/changed_file
 	fi
 
 fi
