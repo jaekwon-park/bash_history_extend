@@ -87,7 +87,7 @@ then
 	then
 		mkdir -p /var/log/changed_file/
 		chown -R root:root /var/log/changed_file
-		chmod -R 0666 /var/log/changed_file
+		chmod -R 0777 /var/log/changed_file
 	fi
 
 fi
