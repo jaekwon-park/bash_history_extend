@@ -1,0 +1,120 @@
+#!/bin/bash
+
+function register () {
+
+echo "local6.debug /var/log/bash_history.log" > /etc/rsyslog.d/100-bash_history_extention.conf
+service rsyslog restart
+
+mkdir -p /etc/bash_history_extention
+echo "LOGGING_FILE_SIZE=2048000" >  /etc/bash_history_extention/config
+echo "SYSLOG_LEVEL=$(cat /etc/rsyslog.d/100-bash_history_extention.conf | awk '{print $1}')" >>  /etc/bash_history_extention/config
+
+echo "remoteip=\$(who -m | awk -F\( '{print \$2}' | sed \"s/[()]//g\" )" > /etc/profile.d/bash_history_extention.sh
+echo "export PROMPT_COMMAND='RETRN_VAL=\$?;logger -p local6.debug \"\$(whoami) \$remoteip [\$\$] [\$PWD]: \$(history 1 | sed \"s/^[ ]*[0-9]\+[ ]*//\" ) [\$RETRN_VAL]\"'" >> /etc/profile.d/bash_history_extention.sh
+echo "readonly PROMPT_COMMAND" >> /etc/profile.d/bash_history_extention.sh
+echo "alias vi=vim" >> /etc/profile.d/bash_history_extention.sh
+
+#vimrc backup
+cp /etc/vimrc /etc/bash_history_extention/vimrc.backup
+
+# vimrc config
+echo "set backup" >> /etc/vimrc
+echo "augroup backups" >> /etc/vimrc
+echo "  au! " >> /etc/vimrc
+echo "autocmd BufWritePost,FileWritePost * !/usr/local/bin/editor_logger.sh <afile> <afile>~" >> /etc/vimrc
+echo "augroup END" >> /etc/vimrc
+
+
+cat << EOF > /usr/local/bin/editor_logger.sh
+#!/bin/bash
+source  /etc/bash_history_extention/config
+
+# Logging  Edited File history
+LOGGING_EDITED_FILE_HISTORY()
+{
+if [ \$(du -b \$1 | cut -f 1) -gt "\$LOGGING_FILE_SIZE" ]
+then
+    logger -p \$SYSLOG_LEVEL "\$(whoami) [\$PWD]: Edit on \$1"
+    logger -p \$SYSLOG_LEVEL "File \$1 is Biiger then \$LOGGING_FILE_SIZE Bytes. so This file doesn't remain the change log."
+else
+    # define Logger File Name
+    edited_file=\$(echo \$(basename \$1)-\$(openssl rand -hex 2))
+    diff -uNr \$2 \$1 > /var/log/changed_file/\$edited_file
+    if [ \$(du -b /var/log/changed_file/\$edited_file | cut -f 1) -eq "0" ]
+    then
+        rm -rf /var/log/changed_file/\$edited_file
+    else
+        logger -p \$SYSLOG_LEVEL "Changed the file \$1 : /var/log/changed_file/\$edited_file"
+    fi
+fi
+}
+
+LOGGING_EDITED_FILE_HISTORY \$1 \$2
+EOF
+chmod +x /usr/local/bin/editor_logger.sh
+mkdir -p /var/log/changed_file/
+chmod 777 /var/log/changed_file/
+}
+
+function delete () {
+
+if [ -e "/etc/bash_history_extention/config" ]
+then
+    mv /etc/bash_history_extention/vimrc.backup /etc/vimrc
+    rm -rf /etc/bash_history_extention
+    rm -rf /etc/profile.d/bash_history_extention.sh
+    rm -rf /usr/local/bin/editor_logger.sh
+    rm -rf /etc/rsyslog.d/100-bash_history_extention.conf
+    service rsyslog restart
+    echo "bash history extention delete completed"
+else
+    echo "bash history extention config doesn't exsit"
+    echo "bash history extention delete failed"
+fi
+}
+
+function usage () {
+    echo "Usage: $(basename $0) [-d|-i]"
+    echo "	-i : install bash history extention"
+    echo " 	-d : delete bash history extention"
+    echo ""
+    echo ""
+    exit $E_BADARGS
+}
+
+E_BADARGS=65
+index=1
+
+if [ ! -n "$1" ]
+then
+    usage
+fi
+
+for arg in "$@"
+do
+    let "index+=1"
+done
+
+if [ $index != 2 ]
+then
+    echo "using only one options [-d|-i]"
+    usage
+fi
+
+
+case $1 in
+
+-i)
+    register
+;;
+
+-d)
+    delete
+;;
+
+*)
+    usage
+
+;;
+
+esac
