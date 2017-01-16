@@ -65,7 +65,7 @@ LOGGING_EDITED_FILE_HISTORY \$1 \$2
 EOF
 chmod +x /usr/local/bin/editor_logger.sh
 mkdir -p /var/log/changed_file/
-chmod 777 /var/log/changed_file/
+chmod 773 /var/log/changed_file/
 }
 
 function delete () {
