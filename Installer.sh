@@ -2,6 +2,19 @@
 
 function register () {
 
+rpm_path=\$(type -p rpm)
+dpkg_path=\$(type -p dpkg)
+
+if [ -e "\$rpm_path"]
+then
+    vim_path=\$(rpm_path -ql vim-common | grep ^/etc.*vimrc$)
+elif [ -e "\$dpkg_path"]
+    vim_path=\$(dpkg_path -L vim-common | grep ^/etc.*vimrc$)
+else
+    echo "can't not find vimrc path"
+    exit
+fi
+
 echo "local6.debug /var/log/bash_history.log" > /etc/rsyslog.d/100-bash_history_extention.conf
 service rsyslog restart
 
@@ -15,15 +28,14 @@ echo "readonly PROMPT_COMMAND" >> /etc/profile.d/bash_history_extention.sh
 echo "alias vi=vim" >> /etc/profile.d/bash_history_extention.sh
 
 #vimrc backup
-cp /etc/vimrc /etc/bash_history_extention/vimrc.backup
+cp \$vim_path /etc/bash_history_extention/vimrc.backup
 
 # vimrc config
-echo "set backup" >> /etc/vimrc
-echo "augroup backups" >> /etc/vimrc
-echo "  au! " >> /etc/vimrc
-echo "autocmd BufWritePost,FileWritePost * !/usr/local/bin/editor_logger.sh <afile> <afile>~" >> /etc/vimrc
-echo "augroup END" >> /etc/vimrc
-
+echo "set backup" >> \$vim_path
+echo "augroup backups" >> \$vim_path
+echo "  au! " >> \$vim_path
+echo "autocmd BufWritePost,FileWritePost * !/usr/local/bin/editor_logger.sh <afile> <afile>~" >> \$vim_path
+echo "augroup END" >> \$vim_path
 
 cat << EOF > /usr/local/bin/editor_logger.sh
 #!/bin/bash
