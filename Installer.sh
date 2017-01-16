@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# https://github.com/jaekwon-park/bash_history_extend/
+# Mail to jaekwon.park@openstack.computer
+
 function register () {
 
 rpm_path=\$(type -p rpm)
