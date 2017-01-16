@@ -8,11 +8,12 @@ function register () {
 rpm_path=$(type -p rpm)
 dpkg_path=$(type -p dpkg)
 
-if [ -e "$rpm_path"]
+if [ -e "$rpm_path" ]
 then
-    vim_path=$(rpm_path -ql vim-common | grep ^/etc.*vimrc$)
-elif [ -e "$dpkg_path"]
-    vim_path=$(dpkg_path -L vim-common | grep ^/etc.*vimrc$)
+    vim_path=$($rpm_path -ql vim-common | grep ^/etc.*vimrc$)
+elif [ -e "$dpkg_path" ]
+then
+    vim_path=$($dpkg_path -L vim-common | grep ^/etc.*vimrc$)
 else
     echo "can't not find vimrc path"
     exit
