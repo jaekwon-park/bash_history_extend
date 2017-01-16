@@ -5,14 +5,14 @@
 
 function register () {
 
-rpm_path=\$(type -p rpm)
-dpkg_path=\$(type -p dpkg)
+rpm_path=$(type -p rpm)
+dpkg_path=$(type -p dpkg)
 
-if [ -e "\$rpm_path"]
+if [ -e "$rpm_path"]
 then
-    vim_path=\$(rpm_path -ql vim-common | grep ^/etc.*vimrc$)
-elif [ -e "\$dpkg_path"]
-    vim_path=\$(dpkg_path -L vim-common | grep ^/etc.*vimrc$)
+    vim_path=$(rpm_path -ql vim-common | grep ^/etc.*vimrc$)
+elif [ -e "$dpkg_path"]
+    vim_path=$(dpkg_path -L vim-common | grep ^/etc.*vimrc$)
 else
     echo "can't not find vimrc path"
     exit
@@ -31,14 +31,14 @@ echo "readonly PROMPT_COMMAND" >> /etc/profile.d/bash_history_extention.sh
 echo "alias vi=vim" >> /etc/profile.d/bash_history_extention.sh
 
 #vimrc backup
-cp \$vim_path /etc/bash_history_extention/vimrc.backup
+cp $vim_path /etc/bash_history_extention/vimrc.backup
 
 # vimrc config
-echo "set backup" >> \$vim_path
-echo "augroup backups" >> \$vim_path
-echo "  au! " >> \$vim_path
-echo "autocmd BufWritePost,FileWritePost * !/usr/local/bin/editor_logger.sh <afile> <afile>~" >> \$vim_path
-echo "augroup END" >> \$vim_path
+echo "set backup" >> $vim_path
+echo "augroup backups" >> $vim_path
+echo "  au! " >> $vim_path
+echo "autocmd BufWritePost,FileWritePost * !/usr/local/bin/editor_logger.sh <afile> <afile>~" >> $vim_path
+echo "augroup END" >> $vim_path
 
 cat << EOF > /usr/local/bin/editor_logger.sh
 #!/bin/bash
