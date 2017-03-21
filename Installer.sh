@@ -11,9 +11,19 @@ dpkg_path=$(type -p dpkg)
 if [ -e "$rpm_path" ]
 then
     vim_path=$($rpm_path -ql vim-common | grep ^/etc.*vimrc$)
+        if [ -z "$vim_path" ]
+        then
+            yum -y install vim-common
+            vim_path=$($rpm_path -ql vim-common | grep ^/etc.*vimrc$)
+        fi
 elif [ -e "$dpkg_path" ]
 then
     vim_path=$($dpkg_path -L vim-common | grep ^/etc.*vimrc$)
+        if [ -z "$vim_path" ]
+        then
+            apt-get install -y vim-common
+            vim_path=$($dpkg_path -L vim-common | grep ^/etc.*vimrc$)
+        fi
 else
     echo "can't not find vimrc path"
     exit
