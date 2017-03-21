@@ -4,14 +4,15 @@
 # Mail to jaekwon.park@openstack.computer
 
 function register () {
-
+# check the package management tool
 rpm_path=$(type -p rpm)
 dpkg_path=$(type -p dpkg)
 
 if [ -e "$rpm_path" ]
 then
     vim_path=$($rpm_path -ql vim-common | grep ^/etc.*vimrc$)
-        if [ -z "$vim_path" ]
+        # install vim-common package for rhel if vim-common package doesn't Install 
+        if [ -z "$vim_path" ] 
         then
             yum -y install vim-common
             vim_path=$($rpm_path -ql vim-common | grep ^/etc.*vimrc$)
@@ -19,6 +20,7 @@ then
 elif [ -e "$dpkg_path" ]
 then
     vim_path=$($dpkg_path -L vim-common | grep ^/etc.*vimrc$)
+        # install vim-common package for ubuntu if vim-common package doesn't Install   
         if [ -z "$vim_path" ]
         then
             apt-get install -y vim-common
