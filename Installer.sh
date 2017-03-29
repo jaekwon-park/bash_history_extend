@@ -78,6 +78,8 @@ fi
 }
 
 LOGGING_EDITED_FILE_HISTORY \$1 \$2
+# remove temporary file
+rm -rf \$2
 EOF
 chmod +x /usr/local/bin/editor_logger.sh
 mkdir -p /var/log/changed_file/
