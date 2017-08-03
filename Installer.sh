@@ -39,7 +39,7 @@ echo "LOGGING_FILE_SIZE=2048000" >  /etc/bash_history_extention/config
 echo "SYSLOG_LEVEL=$(cat /etc/rsyslog.d/100-bash_history_extention.conf | awk '{print $1}')" >>  /etc/bash_history_extention/config
 
 echo "remoteip=\$(who -m | awk -F\( '{print \$2}' | sed \"s/[()]//g\" )" > /etc/profile.d/bash_history_extention.sh
-echo "export PROMPT_COMMAND='RETRN_VAL=\$?;logger -p local6.debug \"\$(whoami) \$remoteip [\$\$] [\$PWD]: \$(history 1 | sed \"s/^[ ]*[0-9]\+[ ]*//\" ) [\$RETRN_VAL]\"'" >> /etc/profile.d/bash_history_extention.sh
+echo "export PROMPT_COMMAND='RETRN_VAL=\$?;logger -p local6.debug \"::\$(whoami) :: \$remoteip :: \$\$ :: \$PWD :: \$(history 1 | sed \"s/^[ ]*[0-9]\+[ ]*//\" ) :: \$RETRN_VAL\"'" >> /etc/profile.d/bash_history_extention.sh
 echo "readonly PROMPT_COMMAND" >> /etc/profile.d/bash_history_extention.sh
 echo "alias vi=vim" >> /etc/profile.d/bash_history_extention.sh
 
@@ -66,7 +66,7 @@ then
     logger -p \$SYSLOG_LEVEL "File \$1 is Biiger then \$LOGGING_FILE_SIZE Bytes. so This file doesn't remain the change log."
 else
     # define Logger File Name
-    edited_file=\$(echo \$(basename \$1)-\$(openssl rand -hex 2))
+    edited_file=\$(echo \$(basename \$1)-\$(openssl rand -hex 16))
     diff -uNr \$2 \$1 > /var/log/changed_file/\$edited_file
     if [ \$(du -b /var/log/changed_file/\$edited_file | cut -f 1) -eq "0" ]
     then
