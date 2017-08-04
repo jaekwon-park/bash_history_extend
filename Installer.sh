@@ -3,6 +3,19 @@
 # https://github.com/jaekwon-park/bash_history_extend/
 # Mail to jaekwon.park@openstack.computer
 
+function rsyslog_set()
+{
+	for i in "/var/log/messages" "\-/var/log/syslog"
+        do
+                rsyslog_conf_file=$(grep -R "$i" /etc/rsyslog*  | awk -F: '{print $1}')
+                rsyslog_conf=$(grep -R "$i" /etc/rsyslog*  | awk -F: '{print $2}' | awk '{print $1}' | sed "s/;local5.none;local6.none//")
+                rsyslog_log_file=$(grep -R "$i" /etc/rsyslog*  | awk -F: '{print $2}' | awk '{print $2}')
+        		rsyslog_conf_number=$(grep -Rn "$i" /etc/rsyslog*  | awk -F: '{print $2}')
+        done
+		sed -i $rsyslog_conf_number"d" $rsyslog_conf_file
+		echo $rsyslog_conf";local5.none;local6.none	"$rsyslog_log_file >> $rsyslog_conf_file
+}
+
 function register () {
 # check the package management tool
 rpm_path=$(type -p rpm)
@@ -32,6 +45,7 @@ else
 fi
 
 echo "local6.debug /var/log/bash_history.log" > /etc/rsyslog.d/100-bash_history_extention.conf
+rsyslog_set
 service rsyslog restart
 
 mkdir -p /etc/bash_history_extention
