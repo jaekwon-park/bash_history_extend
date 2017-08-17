@@ -81,12 +81,13 @@ then
 else
     # define Logger File Name
     edited_file=\$(echo \$(basename \$1)-\$(openssl rand -hex 16))
+    shell_pid=\$(ps -o ppid= -p \$\$)
     diff -uNr \$2 \$1 > /var/log/changed_file/\$edited_file
     if [ \$(du -b /var/log/changed_file/\$edited_file | cut -f 1) -eq "0" ]
     then
         rm -rf /var/log/changed_file/\$edited_file
     else
-        logger -p \$SYSLOG_LEVEL "Changed the file \$1 : /var/log/changed_file/\$edited_file"
+        logger -p \$SYSLOG_LEVEL "Changed_the_file \$1 [\$(ps -o ppid= -p \$shell_pid)] : /var/log/changed_file/\$edited_file"
     fi
 fi
 }
