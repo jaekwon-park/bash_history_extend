@@ -51,8 +51,8 @@ service rsyslog restart
 mkdir -p /etc/bash_history_extention
 echo "LOGGING_FILE_SIZE=2048000" >  /etc/bash_history_extention/config
 echo "SYSLOG_LEVEL=$(cat /etc/rsyslog.d/100-bash_history_extention.conf | awk '{print $1}')" >>  /etc/bash_history_extention/config
-
 echo "remoteip=\$(who -m | awk -F\( '{print \$2}' | sed \"s/[()]//g\" )" > /etc/profile.d/bash_history_extention.sh
+echo "if [[ -z \$remoteip ]]; then remoteip="localhost"; fi" >> >> /etc/profile.d/bash_history_extention.sh
 echo "export PROMPT_COMMAND='RETRN_VAL=\$?;logger -p local6.debug \"\$(whoami) \$remoteip [\$\$] [\$PWD]: \$(history 1 | sed \"s/^[ ]*[0-9]\+[ ]*//\" ) [\$RETRN_VAL]\"'" >> /etc/profile.d/bash_history_extention.sh
 echo "readonly PROMPT_COMMAND" >> /etc/profile.d/bash_history_extention.sh
 echo "alias vi=vim" >> /etc/profile.d/bash_history_extention.sh
