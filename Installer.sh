@@ -14,6 +14,9 @@ function rsyslog_set()
         done
 		sed -i $rsyslog_conf_number"d" $rsyslog_conf_file
 		echo $rsyslog_conf";local5.none;local6.none	"$rsyslog_log_file >> $rsyslog_conf_file
+	if [[ $(grep -c "^\$RepeatedMsgReduction on" /etc/rsyslog.conf) -eq 0 ]]; then
+		echo "\$RepeatedMsgReduction on" >> /etc/rsyslog.conf
+	fi
 }
 
 function register () {
