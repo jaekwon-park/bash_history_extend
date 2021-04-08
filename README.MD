@@ -5,7 +5,9 @@
 ```
 # chmod +x Installer.sh 
 # ./Installer.sh -i
+```
 바로 설치
+```
 # curl -s https://raw.githubusercontent.com/jaekwon-park/bash_history_extend/master/Installer.sh | bash -s -- -i
 ```
 
