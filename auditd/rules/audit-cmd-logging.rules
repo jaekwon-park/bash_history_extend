@@ -1,0 +1,69 @@
+# ============================================================
+# audit-cmd-logging.rules
+# auditd rules for user command execution and file change logging
+# Compatible with auditd 2.x and 3.x
+# ============================================================
+
+# 1. Remove all existing rules
+-D
+
+# 2. Set kernel buffer size (increase if events are being dropped)
+-b 16384
+
+# 3. Failure mode: 1=printk, 2=panic
+-f 1
+
+# ────────────────────────────────────────
+# Command execution logging
+# Captures all execve syscalls by users with a real login session (auid set).
+# auid=4294967295 (0xFFFFFFFF) means auid is unset → skip kernel/daemon processes
+# ────────────────────────────────────────
+
+# 64-bit binaries
+-a always,exit -F arch=b64 -S execve -F auid!=4294967295 -k cmd_logging
+
+# 32-bit binaries (on 64-bit kernels)
+-a always,exit -F arch=b32 -S execve -F auid!=4294967295 -k cmd_logging
+
+# ────────────────────────────────────────
+# File change logging
+# Watches critical directories for write/attribute-change operations.
+# Adjust paths to match your environment.
+# ────────────────────────────────────────
+
+# System configuration
+-w /etc -p wa -k file_changes
+
+# Web/application roots (comment out if not applicable)
+# -w /var/www -p wa -k file_changes
+# -w /srv -p wa -k file_changes
+
+# Cron and scheduled tasks
+-w /etc/cron.d -p wa -k file_changes
+-w /etc/cron.daily -p wa -k file_changes
+-w /etc/cron.weekly -p wa -k file_changes
+-w /etc/cron.monthly -p wa -k file_changes
+-w /var/spool/cron -p wa -k file_changes
+
+# Systemd units
+-w /etc/systemd -p wa -k file_changes
+-w /usr/lib/systemd/system -p wa -k file_changes
+
+# PAM and authentication
+-w /etc/pam.d -p wa -k file_changes
+-w /etc/security -p wa -k file_changes
+-w /etc/sudoers -p wa -k file_changes
+-w /etc/sudoers.d -p wa -k file_changes
+
+# SSH configuration
+-w /etc/ssh/sshd_config -p wa -k file_changes
+
+# Shell profiles (captures .bashrc / .profile edits)
+-w /etc/profile -p wa -k file_changes
+-w /etc/profile.d -p wa -k file_changes
+-w /etc/bash.bashrc -p wa -k file_changes
+
+# ────────────────────────────────────────
+# Make the ruleset immutable (comment out during testing)
+# -e 2
+# ────────────────────────────────────────

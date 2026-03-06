@@ -1,0 +1,48 @@
+# ============================================================
+# logrotate configuration for cmd_history.log
+# Install to: /etc/logrotate.d/cmd_history
+# ============================================================
+
+/var/log/cmd_history.log {
+    # Rotate daily
+    daily
+
+    # Keep 90 days of history
+    rotate 90
+
+    # Compress rotated logs
+    compress
+    delaycompress
+
+    # Don't error if log file is missing
+    missingok
+
+    # Don't rotate if empty
+    notifempty
+
+    # Don't copy+truncate (use rename for atomicity)
+    nocopytruncate
+
+    # Set permissions on new log file
+    create 0640 root adm
+
+    # Post-rotate: no need to signal auditd/plugin since it uses O_APPEND
+    postrotate
+        /bin/true
+    endscript
+}
+
+/var/log/changed_file/*.diff {
+    # Rotate weekly
+    weekly
+
+    # Keep 12 weeks
+    rotate 12
+
+    compress
+    delaycompress
+    missingok
+    notifempty
+
+    create 0640 root adm
+}

@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build binaries
+        run: |
+          cd auditd/cmd/audit-cmd-logger
+          mkdir -p dist
+
+          GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/audit-cmd-logger-linux-amd64   .
+          GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/audit-cmd-logger-linux-arm64   .
+          GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/audit-cmd-logger-darwin-amd64  .
+          GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/audit-cmd-logger-darwin-arm64  .
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/audit-cmd-logger-windows-amd64.exe .
+
+          ls -lh dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## audit-cmd-logger ${{ github.ref_name }}
+
+            auditd 기반 명령어 로깅 시스템 바이너리 릴리즈.
+
+            ### 지원 플랫폼
+            | 파일 | OS | Arch |
+            |------|-----|------|
+            | audit-cmd-logger-linux-amd64   | Linux   | x86_64 |
+            | audit-cmd-logger-linux-arm64   | Linux   | ARM64  |
+            | audit-cmd-logger-darwin-amd64  | macOS   | Intel  |
+            | audit-cmd-logger-darwin-arm64  | macOS   | Apple Silicon |
+            | audit-cmd-logger-windows-amd64.exe | Windows | x86_64 |
+
+            ### 설치
+            ```bash
+            # Linux/macOS
+            chmod +x audit-cmd-logger-linux-amd64
+            sudo mv audit-cmd-logger-linux-amd64 /usr/local/sbin/audit-cmd-logger
+
+            # 또는 Installer.sh 사용
+            sudo bash Installer.sh
+            ```
+          files: |
+            auditd/cmd/audit-cmd-logger/dist/audit-cmd-logger-linux-amd64
+            auditd/cmd/audit-cmd-logger/dist/audit-cmd-logger-linux-arm64
+            auditd/cmd/audit-cmd-logger/dist/audit-cmd-logger-darwin-amd64
+            auditd/cmd/audit-cmd-logger/dist/audit-cmd-logger-darwin-arm64
+            auditd/cmd/audit-cmd-logger/dist/audit-cmd-logger-windows-amd64.exe
+          draft: false
+          prerelease: false
