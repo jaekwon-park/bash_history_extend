@@ -184,7 +184,7 @@ download_from_github() {
     info "Fetching latest release info from GitHub..."
     download_url="$(curl -fsSL "${api_url}" 2>/dev/null \
         | grep '"browser_download_url"' \
-        | grep "\"${asset_name}\"" \
+        | grep "/${asset_name}\"" \
         | head -1 \
         | sed 's/.*"browser_download_url": *"\([^"]*\)".*/\1/')"
 
