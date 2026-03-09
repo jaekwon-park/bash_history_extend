@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/syslog"
 	"os"
 	"regexp"
 	"strconv"
@@ -69,12 +70,22 @@ var (
 func main() {
 	flag.Parse()
 
-	f, err := os.OpenFile(*logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+	// Output: syslog(local5.info) → rsyslog → /var/log/cmd_history.log
+	// Fallback: direct file write if syslog is unavailable
+	sl, err := syslog.New(syslog.LOG_INFO|syslog.LOG_LOCAL5, "audit-cmd-logger")
 	if err != nil {
-		log.Fatalf("cannot open log file %s: %v", *logFilePath, err)
+		// syslog 연결 실패 시 직접 파일 쓰기로 폴백
+		log.Printf("syslog unavailable (%v), falling back to file: %s", err, *logFilePath)
+		f, ferr := os.OpenFile(*logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+		if ferr != nil {
+			log.Fatalf("cannot open log file %s: %v", *logFilePath, ferr)
+		}
+		defer f.Close()
+		fileLogger = log.New(f, "", 0)
+	} else {
+		defer sl.Close()
+		fileLogger = log.New(sl, "", 0)
 	}
-	defer f.Close()
-	fileLogger = log.New(f, "", 0)
 
 	switch *inputMode {
 	case "stdin":
