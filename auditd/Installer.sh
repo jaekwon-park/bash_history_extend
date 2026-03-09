@@ -71,11 +71,31 @@ install_package() {
 
 check_auditd_version() {
     local ver major
-    ver="$(auditd --version 2>&1 | grep -oP '\d+\.\d+' | head -1)"
-    major="${ver%%.*}"
-    if [[ -z "${ver}" ]] || [[ "${major}" -lt 3 ]]; then
-        die "auditd 3.0+ is required. Detected version: ${ver:-unknown}. Aborting."
+
+    # Method 1: rpm (RHEL / CentOS / Rocky / AlmaLinux)
+    if command -v rpm &>/dev/null; then
+        ver="$(rpm -q --queryformat '%{VERSION}' audit 2>/dev/null | grep -oP '^\d+\.\d+')"
     fi
+
+    # Method 2: dpkg (Debian / Ubuntu)
+    if [[ -z "${ver}" ]] && command -v dpkg &>/dev/null; then
+        ver="$(dpkg -l auditd 2>/dev/null | awk '/^ii/{print $3}' | grep -oP '^\d+\.\d+')"
+    fi
+
+    # Method 3: /etc/audit/plugins.d 존재 여부로 3.x 판별
+    if [[ -z "${ver}" ]]; then
+        if [[ -d /etc/audit/plugins.d ]]; then
+            info "auditd version: unknown (plugins.d directory found, assuming 3.x)"
+            return 0
+        fi
+        die "auditd 3.0+ is required but version could not be determined. Aborting."
+    fi
+
+    major="${ver%%.*}"
+    if [[ "${major}" -lt 3 ]]; then
+        die "auditd 3.0+ is required. Detected version: ${ver}. Aborting."
+    fi
+
     info "auditd version: ${ver}"
 }
 
