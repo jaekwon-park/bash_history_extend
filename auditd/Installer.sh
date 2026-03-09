@@ -21,8 +21,6 @@ SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/cmd/${BINARY_NAME}"
 RULES_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rules/audit-cmd-logging.rules"
 PLUGIN_CONF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/plugins/audit-cmd-logger.conf"
 LOGROTATE_CONF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logrotate/cmd_history"
-RSYSLOG_CONF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rsyslog.d/50-cmd-history.conf"
-RSYSLOG_INSTALL_PATH="/etc/rsyslog.d/50-cmd-history.conf"
 
 GITHUB_REPO="jaekwon-park/bash_history_extend"
 LOG_FILE="/var/log/cmd_history.log"
@@ -296,30 +294,13 @@ register() {
 
     install -m 773 -d "${CHANGED_FILE_DIR}"
 
-    # ── 6. Install rsyslog routing config ─────────────────
-    if command -v rsyslogd &>/dev/null || [[ -d /etc/rsyslog.d ]]; then
-        info "Installing rsyslog config to ${RSYSLOG_INSTALL_PATH}"
-        install -m 644 "${RSYSLOG_CONF}" "${RSYSLOG_INSTALL_PATH}"
-        info "Restarting rsyslog..."
-        if command -v systemctl &>/dev/null && systemctl is-active rsyslog &>/dev/null; then
-            systemctl restart rsyslog
-        elif command -v service &>/dev/null; then
-            service rsyslog restart 2>/dev/null || true
-        else
-            warn "Could not restart rsyslog automatically. Please restart it manually."
-        fi
-    else
-        warn "rsyslog not found. Skipping rsyslog config installation."
-        warn "Logs will fall back to direct file write: ${LOG_FILE}"
-    fi
-
-    # ── 7. Install logrotate config ───────────────────────
+    # ── 6. Install logrotate config ───────────────────────
     if [[ -d /etc/logrotate.d ]]; then
         info "Installing logrotate config to /etc/logrotate.d/cmd_history"
         install -m 644 "${LOGROTATE_CONF}" /etc/logrotate.d/cmd_history
     fi
 
-    # ── 9. Load rules and restart auditd ──────────────────
+    # ── 7. Load rules and restart auditd ──────────────────
     info "Loading audit rules..."
     if command -v augenrules &>/dev/null; then
         augenrules --load
@@ -337,7 +318,7 @@ register() {
         warn "Could not restart auditd automatically. Please restart it manually."
     fi
 
-    # ── 10. Enable auditd on boot ─────────────────────────
+    # ── 8. Enable auditd on boot ──────────────────────────
     if command -v systemctl &>/dev/null; then
         systemctl enable auditd 2>/dev/null || true
     fi
@@ -350,7 +331,6 @@ register() {
     info " File diffs:  ${CHANGED_FILE_DIR}/"
     info " Rules:       ${rules_dir}/audit-cmd-logging.rules"
     info " Plugin:      ${plugin_dir}/audit-cmd-logger.conf"
-    info " rsyslog:     ${RSYSLOG_INSTALL_PATH}"
     info ""
     info " Verify with: auditctl -l"
     info " Tail logs:   tail -f ${LOG_FILE}"
@@ -380,15 +360,6 @@ delete() {
     rules_dir="$(audit_rules_dir)"
     rm -f "${rules_dir}/audit-cmd-logging.rules"
     info "Removed audit rules"
-
-    # Remove rsyslog config
-    rm -f "${RSYSLOG_INSTALL_PATH}"
-    info "Removed rsyslog config"
-    if command -v systemctl &>/dev/null && systemctl is-active rsyslog &>/dev/null; then
-        systemctl restart rsyslog 2>/dev/null || true
-    elif command -v service &>/dev/null; then
-        service rsyslog restart 2>/dev/null || true
-    fi
 
     # Remove logrotate config
     rm -f /etc/logrotate.d/cmd_history
