@@ -22,6 +22,7 @@ RULES_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rules/audit-cmd-loggin
 PLUGIN_CONF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/plugins/audit-cmd-logger.conf"
 LOGROTATE_CONF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logrotate/cmd_history"
 
+GITHUB_REPO="jaekwon-park/bash_history_extend"
 LOG_FILE="/var/log/cmd_history.log"
 CHANGED_FILE_DIR="/var/log/changed_file"
 GO_MIN_VERSION="1.21"
@@ -163,6 +164,86 @@ build_binary() {
 }
 
 # ─────────────────────────────────────────────────────────────
+# Download binary from GitHub latest release
+# ─────────────────────────────────────────────────────────────
+
+download_from_github() {
+    local os arch asset_name download_url api_url
+
+    os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    arch="$(uname -m)"
+    case "${arch}" in
+        x86_64)  arch="amd64" ;;
+        aarch64) arch="arm64" ;;
+        *) warn "GitHub download: unsupported architecture '${arch}'"; return 1 ;;
+    esac
+
+    asset_name="${BINARY_NAME}-${os}-${arch}"
+    api_url="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
+
+    info "Fetching latest release info from GitHub..."
+    download_url="$(curl -fsSL "${api_url}" 2>/dev/null \
+        | grep '"browser_download_url"' \
+        | grep "\"${asset_name}\"" \
+        | head -1 \
+        | sed 's/.*"browser_download_url": *"\([^"]*\)".*/\1/')"
+
+    if [[ -z "${download_url}" ]]; then
+        warn "GitHub: release asset '${asset_name}' not found."
+        return 1
+    fi
+
+    info "Downloading ${asset_name} from GitHub..."
+    if curl -fsSL -o "${BINARY_INSTALL_PATH}" "${download_url}"; then
+        chmod 755 "${BINARY_INSTALL_PATH}"
+        info "Binary installed from GitHub: ${BINARY_INSTALL_PATH}"
+        return 0
+    else
+        warn "GitHub download failed: ${download_url}"
+        rm -f "${BINARY_INSTALL_PATH}"
+        return 1
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────
+# Install binary: local → GitHub → build from source
+# ─────────────────────────────────────────────────────────────
+
+install_binary() {
+    local prebuilt
+    prebuilt="$(dirname "${BASH_SOURCE[0]}")/bin/${BINARY_NAME}"
+
+    # 1. Local prebuilt binary
+    if [[ -f "${prebuilt}" ]]; then
+        info "Using local pre-compiled binary: ${prebuilt}"
+        install -m 755 "${prebuilt}" "${BINARY_INSTALL_PATH}"
+        return 0
+    fi
+    info "Local binary not found (${prebuilt})."
+
+    # 2. GitHub latest release
+    if download_from_github; then
+        return 0
+    fi
+    warn "GitHub download failed. Falling back to local source build..."
+
+    # 3. Build from source
+    local go_bin tmp_go_dir=""
+    if go_bin="$(find_go)"; then
+        info "Using Go at: ${go_bin}"
+    else
+        go_bin="$(install_go_temp)"
+        tmp_go_dir="$(dirname "$(dirname "${go_bin}")")"
+    fi
+
+    build_binary "${go_bin}"
+
+    if [[ -n "${tmp_go_dir}" ]]; then
+        rm -rf "${tmp_go_dir}"
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────
 # Install function
 # ─────────────────────────────────────────────────────────────
 
@@ -186,31 +267,8 @@ register() {
         apt)     install_package "audispd-plugins"  2>/dev/null || true ;;
     esac
 
-    # ── 2. Build binary ────────────────────────────────────
-    local go_bin
-    local tmp_go_dir=""
-
-    if go_bin="$(find_go)"; then
-        info "Using Go at: ${go_bin}"
-    else
-        go_bin="$(install_go_temp)"
-        tmp_go_dir="$(dirname "$(dirname "${go_bin}")")"
-    fi
-
-    # If pre-compiled binary exists next to Installer.sh, use it directly
-    local prebuilt
-    prebuilt="$(dirname "${BASH_SOURCE[0]}")/bin/${BINARY_NAME}"
-    if [[ -f "${prebuilt}" ]]; then
-        info "Using pre-compiled binary: ${prebuilt}"
-        install -m 755 "${prebuilt}" "${BINARY_INSTALL_PATH}"
-    else
-        build_binary "${go_bin}"
-    fi
-
-    # Cleanup temp Go installation
-    if [[ -n "${tmp_go_dir}" ]]; then
-        rm -rf "${tmp_go_dir}"
-    fi
+    # ── 2. Install binary (local → GitHub → source build) ──
+    install_binary
 
     # ── 3. Install audit rules ─────────────────────────────
     local rules_dir
