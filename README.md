@@ -92,6 +92,48 @@ sudo ./Installer.sh -d   # 삭제
 sudo ./Installer.sh -s   # 상태 확인
 ```
 
+### 설치 후 확인
+
+설치가 완료되면 아래 경로에 파일이 생성된다.
+
+#### 설치 파일 목록
+
+| 경로 | 설명 |
+|------|------|
+| `/usr/local/bin/audit-cmd-logger` | audisp 플러그인 바이너리 |
+| `/etc/audit/rules.d/audit-cmd-logging.rules` | auditd 감사 규칙 (auditd 2.x) |
+| `/etc/audit/audit-cmd-logging.rules` | auditd 감사 규칙 (rules.d 없는 구버전) |
+| `/etc/audit/plugins.d/audit-cmd-logger.conf` | audisp 플러그인 설정 (auditd 3.x) |
+| `/etc/audisp/plugins.d/audit-cmd-logger.conf` | audisp 플러그인 설정 (auditd 2.x) |
+| `/var/log/cmd_history.log` | 명령어 실행 로그 |
+| `/var/log/changed_file/` | 파일 수정 diff 저장 디렉터리 |
+| `/etc/logrotate.d/cmd_history` | logrotate 설정 |
+
+> `auditd 2.x` vs `3.x` 구분: `auditd --version` 으로 확인. 3.x 이상이면 `/etc/audit/plugins.d/`, 미만이면 `/etc/audisp/plugins.d/` 경로 사용.
+
+#### 설치 확인 명령어
+
+```bash
+# 바이너리 설치 확인
+ls -lh /usr/local/bin/audit-cmd-logger
+
+# auditd 규칙 적용 확인
+auditctl -l | grep cmd_logging
+
+# audisp 플러그인 설정 확인 (auditd 버전에 따라 경로 상이)
+cat /etc/audit/plugins.d/audit-cmd-logger.conf 2>/dev/null \
+  || cat /etc/audisp/plugins.d/audit-cmd-logger.conf
+
+# auditd 서비스 상태 확인
+systemctl status auditd
+
+# 로그 실시간 확인
+tail -f /var/log/cmd_history.log
+
+# 설치 상태 일괄 확인 (스크립트 내장 명령)
+sudo ./Installer.sh -s
+```
+
 ### 로그 형식
 
 ```
