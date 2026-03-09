@@ -6,10 +6,12 @@
 # Installs audit-cmd-logger: a Go-based audisp plugin that logs
 # every command executed by logged-in users via auditd.
 #
+# Requires: auditd 3.0+
+#
 # Supports:
-#   RHEL / CentOS / Rocky / AlmaLinux 6/7/8/9
-#   Debian / Ubuntu 16.04+
-#   Any systemd-based Linux distribution
+#   RHEL / CentOS / Rocky / AlmaLinux 8/9
+#   Debian / Ubuntu 20.04+
+#   Any systemd-based Linux distribution with auditd 3.x
 # ============================================================
 
 set -euo pipefail
@@ -67,29 +69,24 @@ install_package() {
     esac
 }
 
-detect_auditd_version() {
-    auditd --version 2>&1 | grep -oP '\d+\.\d+' | head -1 || echo "0.0"
+check_auditd_version() {
+    local ver major
+    ver="$(auditd --version 2>&1 | grep -oP '\d+\.\d+' | head -1)"
+    major="${ver%%.*}"
+    if [[ -z "${ver}" ]] || [[ "${major}" -lt 3 ]]; then
+        die "auditd 3.0+ is required. Detected version: ${ver:-unknown}. Aborting."
+    fi
+    info "auditd version: ${ver}"
 }
 
-# Returns the audisp plugins directory based on auditd version
+# auditd 3.x: plugin directory is always /etc/audit/plugins.d
 audisp_plugin_dir() {
-    local ver
-    ver="$(detect_auditd_version)"
-    local major="${ver%%.*}"
-    if [[ "${major}" -ge 3 ]]; then
-        echo "/etc/audit/plugins.d"
-    else
-        echo "/etc/audisp/plugins.d"
-    fi
+    echo "/etc/audit/plugins.d"
 }
 
-# Returns the audit rules directory
+# auditd 3.x: rules directory is always /etc/audit/rules.d
 audit_rules_dir() {
-    if [[ -d /etc/audit/rules.d ]]; then
-        echo "/etc/audit/rules.d"
-    else
-        echo "/etc/audit"
-    fi
+    echo "/etc/audit/rules.d"
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -259,13 +256,8 @@ register() {
         esac
     fi
 
-    # Install audispd-plugins if available (needed on older systems)
-    local mgr
-    mgr="$(detect_pkg_manager)"
-    case "${mgr}" in
-        dnf|yum) install_package "audispd-plugins" 2>/dev/null || true ;;
-        apt)     install_package "audispd-plugins"  2>/dev/null || true ;;
-    esac
+    # Require auditd 3.0+
+    check_auditd_version
 
     # ── 2. Install binary (local → GitHub → source build) ──
     install_binary
@@ -349,10 +341,7 @@ delete() {
     info "Removed ${BINARY_INSTALL_PATH}"
 
     # Remove plugin config
-    local plugin_dir
-    plugin_dir="$(audisp_plugin_dir 2>/dev/null || echo /etc/audit/plugins.d)"
-    rm -f "${plugin_dir}/audit-cmd-logger.conf"
-    rm -f "/etc/audisp/plugins.d/audit-cmd-logger.conf"
+    rm -f "/etc/audit/plugins.d/audit-cmd-logger.conf"
     info "Removed audisp plugin config"
 
     # Remove audit rules
