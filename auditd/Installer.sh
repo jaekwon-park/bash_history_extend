@@ -265,6 +265,32 @@ install_binary() {
 # ─────────────────────────────────────────────────────────────
 
 register() {
+    # ── 0. Check SELinux ───────────────────────────────────
+    if command -v getenforce &>/dev/null; then
+        local selinux_status
+        selinux_status="$(getenforce 2>/dev/null)"
+        if [[ "${selinux_status}" != "Disabled" ]]; then
+            error "======================================================"
+            error " SELinux is ${selinux_status}."
+            error ""
+            error " audit-cmd-logger 바이너리가 auditd 플러그인으로"
+            error " 실행될 때 SELinux 정책에 의해 차단될 수 있습니다."
+            error ""
+            error " 설치 전 아래 중 하나를 선택하세요:"
+            error ""
+            error "   1) SELinux 비활성화 (권장하지 않음)"
+            error "      setenforce 0  # 임시 (재부팅 시 원복)"
+            error "      또는 /etc/selinux/config 에서 SELINUX=disabled 설정"
+            error ""
+            error "   2) 바이너리에 SELinux 컨텍스트 수동 적용 후 재시도"
+            error "      chcon -t bin_t /usr/local/bin/audit-cmd-logger"
+            error ""
+            error " 설치를 중단합니다."
+            error "======================================================"
+            exit 1
+        fi
+    fi
+
     # ── 1. Check / install auditd ──────────────────────────
     if ! command -v auditd &>/dev/null; then
         info "auditd not found. Installing..."
