@@ -137,12 +137,14 @@ sudo ./Installer.sh -s
 ### 로그 형식
 
 ```
-2026-03-05T16:08:00+09:00 user=root(uid=0,auid=1000) remote=10.1.1.105 tty=pts0 pid=12345 ppid=12344 cwd=/home/user exit=0 cmd=ls -alh /etc
+Mar  5 16:08:00 hostname user: root 10.1.1.105 [12345] [/home/user]: ls -alh /etc [0]
 ```
+
+`시각 호스트 접속계정: 실행계정 원격IP [PID] [현재경로]: 명령어 [종료코드]`
 
 파일 쓰기 이벤트:
 ```
-2026-03-05T16:09:00+09:00 user=root(uid=0,auid=1000) remote=10.1.1.105 FILE_WRITE path=/etc/nginx/nginx.conf (via /usr/bin/vim)
+Mar  5 16:09:00 hostname user: root 10.1.1.105 [EDIT] [/etc/nginx/nginx.conf] (via /usr/bin/vim)
 ```
 
 ### 파일 구성

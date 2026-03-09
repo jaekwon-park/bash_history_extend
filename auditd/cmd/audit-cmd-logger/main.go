@@ -50,6 +50,9 @@ var (
 
 	fileLogger *log.Logger
 
+	// hostname cached at startup
+	systemHostname string
+
 	// sessionMap: ses -> remote_ip  (populated from USER_LOGIN / USER_START)
 	sessionMu  sync.RWMutex
 	sessionMap = make(map[string]string)
@@ -68,6 +71,12 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// cache hostname once
+	systemHostname, _ = os.Hostname()
+	if systemHostname == "" {
+		systemHostname = "localhost"
+	}
 
 	f, err := os.OpenFile(*logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
 	if err != nil {
@@ -254,25 +263,21 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 	auid := syscall["auid"]
 	ses := syscall["ses"]
 	pid := syscall["pid"]
-	ppid := syscall["ppid"]
 	exitCode := syscall["exit"]
-	tty := unquote(syscall["tty"])
-	if tty == "" || tty == "?" {
-		tty = "unknown"
-	}
 
 	// Skip kernel threads / unset auid daemons (auid=4294967295)
 	if auid == "4294967295" {
 		return
 	}
 
-	username := lookupUID(uid)
+	// loginUser: who logged in (auid), execUser: who ran the command (uid)
+	loginUser := lookupUID(auid)
+	execUser := lookupUID(uid)
 	remote := remoteIP(ses)
 
 	// Build command line from EXECVE record
 	cmdline := buildCmdline(records)
 	if cmdline == "" {
-		// fallback to exe field in SYSCALL
 		cmdline = unquote(syscall["exe"])
 	}
 	if cmdline == "" {
@@ -285,9 +290,10 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 		cwd = unquote(cwdRec["cwd"])
 	}
 
-	ts := time.Now().Format(time.RFC3339)
-	fileLogger.Printf("%s user=%s(uid=%s,auid=%s) remote=%s tty=%s pid=%s ppid=%s cwd=%s exit=%s cmd=%s",
-		ts, username, uid, auid, remote, tty, pid, ppid, cwd, exitCode, cmdline)
+	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [pid] [cwd]: cmd [exit]
+	ts := time.Now().Format(time.Stamp)
+	fileLogger.Printf("%s %s %s: %s %s [%s] [%s]: %s [%s]",
+		ts, systemHostname, loginUser, execUser, remote, pid, cwd, cmdline, exitCode)
 }
 
 func emitFileChangeLog(syscall map[string]string, records map[string]map[string]string) {
@@ -299,7 +305,8 @@ func emitFileChangeLog(syscall map[string]string, records map[string]map[string]
 		return
 	}
 
-	username := lookupUID(uid)
+	loginUser := lookupUID(auid)
+	execUser := lookupUID(uid)
 	remote := remoteIP(ses)
 
 	// Collect modified paths from PATH records
@@ -314,13 +321,13 @@ func emitFileChangeLog(syscall map[string]string, records map[string]map[string]
 		}
 	}
 
-	// Also try exe from SYSCALL
 	exe := unquote(syscall["exe"])
 
-	ts := time.Now().Format(time.RFC3339)
+	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [EDIT] [path] (via exe)
+	ts := time.Now().Format(time.Stamp)
 	for _, p := range paths {
-		fileLogger.Printf("%s user=%s(uid=%s,auid=%s) remote=%s FILE_WRITE path=%s (via %s)",
-			ts, username, uid, auid, remote, p, exe)
+		fileLogger.Printf("%s %s %s: %s %s [EDIT] [%s] (via %s)",
+			ts, systemHostname, loginUser, execUser, remote, p, exe)
 	}
 }
 
