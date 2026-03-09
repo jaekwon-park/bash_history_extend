@@ -107,6 +107,7 @@ sudo ./Installer.sh -s   # 상태 확인
 | `/etc/audisp/plugins.d/audit-cmd-logger.conf` | audisp 플러그인 설정 (auditd 2.x) |
 | `/var/log/cmd_history.log` | 명령어 실행 로그 |
 | `/var/log/changed_file/` | 파일 수정 diff 저장 디렉터리 |
+| `/etc/rsyslog.d/50-cmd-history.conf` | rsyslog 라우팅 설정 (local5.info → cmd_history.log) |
 | `/etc/logrotate.d/cmd_history` | logrotate 설정 |
 
 > `auditd 2.x` vs `3.x` 구분: `auditd --version` 으로 확인. 3.x 이상이면 `/etc/audit/plugins.d/`, 미만이면 `/etc/audisp/plugins.d/` 경로 사용.
@@ -123,6 +124,12 @@ auditctl -l | grep cmd_logging
 # audisp 플러그인 설정 확인 (auditd 버전에 따라 경로 상이)
 cat /etc/audit/plugins.d/audit-cmd-logger.conf 2>/dev/null \
   || cat /etc/audisp/plugins.d/audit-cmd-logger.conf
+
+# rsyslog 라우팅 설정 확인
+cat /etc/rsyslog.d/50-cmd-history.conf
+
+# rsyslog 서비스 상태 확인
+systemctl status rsyslog
 
 # auditd 서비스 상태 확인
 systemctl status auditd
