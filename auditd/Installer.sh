@@ -349,9 +349,11 @@ register() {
 
     info "Restarting auditd..."
     if command -v systemctl &>/dev/null && systemctl is-system-running &>/dev/null; then
-        systemctl restart auditd
+        systemctl kill auditd
+        systemctl start auditd
     elif command -v service &>/dev/null; then
-        service auditd restart
+        systemctl kill auditd
+        systemctl start auditd
     else
         warn "Could not restart auditd automatically. Please restart it manually."
     fi
