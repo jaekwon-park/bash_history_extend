@@ -262,7 +262,7 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 	uid := syscall["uid"]
 	auid := syscall["auid"]
 	ses := syscall["ses"]
-	pid := syscall["pid"]
+	shellPID := syscall["ppid"] // parent process = the shell that invoked this command
 	exitCode := syscall["exit"]
 	tty := unquote(syscall["tty"])
 
@@ -308,10 +308,10 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 		cwd = unquote(cwdRec["cwd"])
 	}
 
-	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [pid] [execType] [cwd]: cmd [exit]
+	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [shellPID] [execType] [cwd]: cmd [exit]
 	ts := time.Now().Format(time.Stamp)
 	fileLogger.Printf("%s %s %s: %s %s [%s] [%s] [%s]: %s [%s]",
-		ts, systemHostname, loginUser, execUser, remote, pid, execType, cwd, cmdline, exitCode)
+		ts, systemHostname, loginUser, execUser, remote, shellPID, execType, cwd, cmdline, exitCode)
 }
 
 func emitFileChangeLog(syscall map[string]string, records map[string]map[string]string) {
