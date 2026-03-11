@@ -264,6 +264,7 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 	ses := syscall["ses"]
 	pid := syscall["pid"]
 	exitCode := syscall["exit"]
+	tty := unquote(syscall["tty"])
 
 	// Skip kernel threads / unset auid daemons (auid=4294967295)
 	if auid == "4294967295" {
@@ -274,6 +275,23 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 	loginUser := lookupUID(auid)
 	execUser := lookupUID(uid)
 	remote := remoteIP(ses)
+
+	// Classify execution context from tty field
+	// pts*        : remote interactive session (SSH, etc.)
+	// tty*, console: local interactive session (physical/virtual console)
+	// (none)      : no controlling terminal → background process (cron, systemd, script)
+	// ?, ""       : unknown / unset
+	var execType string
+	switch {
+	case strings.HasPrefix(tty, "pts"):
+		execType = "exec=remote_user"
+	case tty == "(none)":
+		execType = "exec=system"
+	case strings.HasPrefix(tty, "tty") || tty == "console":
+		execType = "exec=local_user"
+	default:
+		execType = "exec=unknown"
+	}
 
 	// Build command line from EXECVE record
 	cmdline := buildCmdline(records)
@@ -290,10 +308,10 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 		cwd = unquote(cwdRec["cwd"])
 	}
 
-	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [pid] [cwd]: cmd [exit]
+	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [pid] [execType] [cwd]: cmd [exit]
 	ts := time.Now().Format(time.Stamp)
-	fileLogger.Printf("%s %s %s: %s %s [%s] [%s]: %s [%s]",
-		ts, systemHostname, loginUser, execUser, remote, pid, cwd, cmdline, exitCode)
+	fileLogger.Printf("%s %s %s: %s %s [%s] [%s] [%s]: %s [%s]",
+		ts, systemHostname, loginUser, execUser, remote, pid, execType, cwd, cmdline, exitCode)
 }
 
 func emitFileChangeLog(syscall map[string]string, records map[string]map[string]string) {
