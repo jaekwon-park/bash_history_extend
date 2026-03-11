@@ -1,0 +1,3 @@
+# Build artifacts
+auditd/cmd/audit-cmd-logger/audit-cmd-logger
+auditd/cmd/audit-cmd-logger/dist/
