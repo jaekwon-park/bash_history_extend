@@ -48,8 +48,6 @@ var (
 	inputMode   = flag.String("mode", "stdin", "input mode: stdin | tail")
 	auditLog    = flag.String("audit-log", defaultAuditLog, "audit log path (tail mode)")
 
-	fileLogger *log.Logger
-
 	// hostname cached at startup
 	systemHostname string
 
@@ -69,6 +67,18 @@ var (
 
 // ──────────────────────────────────────────────────────────── main ──
 
+// writeLog opens the log file, appends a single formatted line, then closes it.
+// This ensures log rotation is handled transparently: after logrotate creates
+// a new cmd_history.log, the next call will open and write to the new file.
+func writeLog(format string, args ...interface{}) {
+	f, err := os.OpenFile(*logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, format+"\n", args...)
+}
+
 func main() {
 	flag.Parse()
 
@@ -77,13 +87,6 @@ func main() {
 	if systemHostname == "" {
 		systemHostname = "localhost"
 	}
-
-	f, err := os.OpenFile(*logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
-	if err != nil {
-		log.Fatalf("cannot open log file %s: %v", *logFilePath, err)
-	}
-	defer f.Close()
-	fileLogger = log.New(f, "", 0)
 
 	switch *inputMode {
 	case "stdin":
@@ -310,7 +313,7 @@ func emitCommandLog(syscall map[string]string, records map[string]map[string]str
 
 	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [shellPID] [execType] [cwd]: cmd [exit]
 	ts := time.Now().Format(time.Stamp)
-	fileLogger.Printf("%s %s %s: %s %s [%s] [%s] [%s]: %s [%s]",
+	writeLog("%s %s %s: %s %s [%s] [%s] [%s]: %s [%s]",
 		ts, systemHostname, loginUser, execUser, remote, shellPID, execType, cwd, cmdline, exitCode)
 }
 
@@ -344,7 +347,7 @@ func emitFileChangeLog(syscall map[string]string, records map[string]map[string]
 	// Format: Jan 12 23:50:42 hostname loginUser: execUser remote [EDIT] [path] (via exe)
 	ts := time.Now().Format(time.Stamp)
 	for _, p := range paths {
-		fileLogger.Printf("%s %s %s: %s %s [EDIT] [%s] (via %s)",
+		writeLog("%s %s %s: %s %s [EDIT] [%s] (via %s)",
 			ts, systemHostname, loginUser, execUser, remote, p, exe)
 	}
 }
